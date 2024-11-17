@@ -8,54 +8,61 @@ import (
 	"nats-jetstream/meilisearch"
 	"nats-jetstream/nat"
 	"nats-jetstream/postgres"
-
-	"github.com/nats-io/nats.go"
 )
 
 const (
-    Subject = "TEST_SUBJECT"
-    StreamName = "TEST_STREAM"
-    ConsumerName = "TEST_CONSUMER"
-    DurableName = "TEST_DURABLE"
+	Subject      = "TEST_SUBJECT"
+	StreamName   = "TEST_STREAM"
+	ConsumerName = "TEST_CONSUMER"
+	DurableName  = "TEST_DURABLE"
+	Url          = "localhost:4222"
 )
 
-//TODO: change log to zap.log all
+const (
+	MeiliBaseURL = "http://localhost:7700"
+	MeiliApiKey  = "my-key"
+	MeiliTable   = "main.tenants"
+	MeiliIndex   = "tenant"
+)
+
+// TODO: change log to zap.log all
 func main() {
-    ctx := context.Background()
+	ctx := context.Background()
 
-    logger := log.New(os.Stdout, "postgres: ", log.LstdFlags)
+	logger := log.New(os.Stdout, "postgres: ", log.LstdFlags)
 
-    store := postgres.New(ctx, logger)
+	store := postgres.New(ctx, logger)
 
-    if store == nil {
-        logger.Fatal("Failed to create store")
-    }
-    
-    log.Printf("Connection to PostgreSQL successfully")
+	if store == nil {
+		logger.Fatal("Failed to create store")
+	}
 
-    _, js, err := nat.SetupNATS(ctx, StreamName, Subject, logger)
+	log.Printf("Connection to PostgreSQL successfully")
 
-    if err != nil {
-        logger.Fatal("Failed to set up JetStream")
-    }
-    
-    go postgres.StartReplicationDatabase(ctx, js, Subject, logger)
+	connector := &nat.URLConnector{URL: Url}
 
-    _, err = js.Subscribe(Subject, func(msg *nats.Msg) {
-        logger.Printf("Received message: %s", string(msg.Data))
+	nc, js, err := connector.Connect(true)
 
-        err := meilisearch.SendToMeilisearch(msg.Data, logger)
-        if err != nil {
-            logger.Printf("Error sending to Meilisearch: %v", err)     
-        }
+	if err != nil {
+		logger.Fatal("Failed to set up JetStream")
+	}
+	defer nc.Close()
 
-        msg.Ack() 
-    }, nats.Durable(DurableName), nats.ManualAck())
+	go postgres.StartReplicationDatabase(ctx, js.(*nat.JetStreamContextImpl).JS, Subject, logger)
+	subManager := &nat.SubscriptionManagerImpl{JetStream: js}
 
-    if err != nil {
-        logger.Fatal("Failed to subscribe to subject", err)
-    }
+	meiliHandler := &meilisearch.MeiliSearchHandler{
+		BaseURL:   MeiliBaseURL,
+		ApiKey:    MeiliApiKey,
+		TableName: MeiliTable,
+		Index:     MeiliIndex,
+	}
 
-    <-ctx.Done()
-    logger.Println("Shutting down application...")
+	_, err = subManager.SubscribeAsyncWithHandler(Subject, DurableName, meiliHandler, logger)
+	if err != nil {
+		logger.Fatal("Failed to subcribe with Meilisearch handler:", err)
+	}
+
+	<-ctx.Done()
+	logger.Println("Shutting down application...")
 }

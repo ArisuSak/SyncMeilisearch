@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"nats-jetstream/nat"
 	"strings"
 	"time"
 
@@ -146,15 +145,15 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
             if err != nil {
                 l.Fatal("ParseXLogData failed", zap.Error(err))
             }
-	
+
             l.Println("wal2json data", zap.String("data", string(xld.WALData)))
-            
-            errPub := nat.PublishAsync(js, jetstreamSubject, xld.WALData)
-            if errPub != nil {
-                l.Fatal("Failed to publish WAL data to NATS", zap.Error(errPub))
-            } else {
-                l.Print("Successfully published WAL data to NATS", zap.String("data", string(xld.WALData)))
-            }
+
+            _, errPub := js.PublishAsync(jetstreamSubject, xld.WALData)
+			if errPub != nil {
+				l.Fatal("Failed to publish WAL data to NATS", zap.Error(errPub))
+			} else {
+				l.Print("Successfully initiated async publish of WAL data to NATS", zap.String("data", string(xld.WALData)))
+			}
 
             if xld.WALStart > clientXLogPos {
                 clientXLogPos = xld.WALStart
@@ -166,7 +165,7 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
 func setupReplication(ctx context.Context, conn *pgconn.PgConn, l *log.Logger) {
 	query := fmt.Sprintf("CREATE PUBLICATION replication_demo FOR TABLE %s;", TableName)
 	result := conn.Exec(ctx, query)
-	
+
     _, err := result.ReadAll()
     if err != nil {
         if strings.Contains(err.Error(), "publication \"replication_demo\" already exists") {
@@ -192,4 +191,3 @@ func setupReplication(ctx context.Context, conn *pgconn.PgConn, l *log.Logger) {
     }
     l.Println("created new replication slot replication_demo")
 }
-
