@@ -58,7 +58,7 @@ func main() {
 		Index:     MeiliIndex,
 	}
 
-	_, err = subManager.SubscribeAsyncWithHandler(Subject, DurableName, meiliHandler, logger)
+	err = subManager.SubscribeAsyncWithHandler(Subject, DurableName, meiliHandler, logger)
 	if err != nil {
 		logger.Fatal("Failed to subcribe with Meilisearch handler:", err)
 	}

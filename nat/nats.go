@@ -104,8 +104,7 @@ func (sm *SubscriptionManagerImpl) SubscribeToSubject(subject, durableName strin
 	return sub, nil
 }
 
-func (sm *SubscriptionManagerImpl) SubscribeAsyncWithHandler(subject, durableName string, handler MessageHandler, logger *log.Logger) (chan []byte, error) {
-	msgCh := make(chan []byte)
+func (sm *SubscriptionManagerImpl) SubscribeAsyncWithHandler(subject, durableName string, handler MessageHandler, logger *log.Logger) error {
 	_, err := sm.JetStream.Subscribe(subject, func(msg *nats.Msg) {
 		logger.Printf("Received message: %s", string(msg.Data))
 
@@ -114,13 +113,8 @@ func (sm *SubscriptionManagerImpl) SubscribeAsyncWithHandler(subject, durableNam
 			logger.Printf("Error handling message: %v", err)
 		}
 
-		msgCh <- msg.Data
 		msg.Ack()
-
 	}, nats.Durable(durableName), nats.ManualAck())
 
-	if err != nil {
-		return nil, err
-	}
-	return msgCh, nil
+	return err
 }

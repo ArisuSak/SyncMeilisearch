@@ -32,20 +32,23 @@ func (m *MeiliSearchHandler) ProcessWalData(data []byte, l *log.Logger) error {
 func (m *MeiliSearchHandler) ProcessChange(change postgres.WALChange) error {
 	var endpoint, method string
 	var payload []byte
+	processor := DefaultMeilisearchProcessor[string]{}
 
 	switch change.Kind {
 	case "insert", "update":
-		payload, err := prepareMeilisearchPayload[string](change)
+		preparePayload, err := processor.preparePayload(change)
+
 		if err != nil {
 			return fmt.Errorf("failed to prepare payload: %w", err)
 		}
+		payload = preparePayload
 
 		fmt.Println("Successfully prepared payload:", string(payload))
 
 		method = "POST"
 		endpoint = fmt.Sprintf("%s/indexes/%s/documents", m.BaseURL, m.Index)
 	case "delete":
-		id, err := extractIDFromChange[string](change)
+		id, err := processor.extractIDFromChange(change)
 		if err != nil {
 			return fmt.Errorf("failed to extract ID: %w", err)
 		}
@@ -54,6 +57,8 @@ func (m *MeiliSearchHandler) ProcessChange(change postgres.WALChange) error {
 	default:
 		return fmt.Errorf("unknown change kind: %s", change.Kind)
 	}
+
+	fmt.Println("Payload right before sending:", string(payload))
 
 	return m.sendHTTPRequest(method, endpoint, payload)
 }
@@ -76,5 +81,6 @@ func (m *MeiliSearchHandler) sendHTTPRequest(method, endpoint string, payload []
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("request failed with status %s", resp.Status)
 	}
+
 	return nil
 }

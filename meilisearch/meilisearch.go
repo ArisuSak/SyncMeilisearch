@@ -6,7 +6,14 @@ import (
 	"nats-jetstream/postgres"
 )
 
-func prepareMeilisearchPayload[T any](change postgres.WALChange) ([]byte, error) {
+type MeilisearchProcessor[T any] interface {
+	PreparePayload(change postgres.WALChange) ([]byte, error)
+	ExtractID(change postgres.WALChange) (T, error)
+}
+
+type DefaultMeilisearchProcessor[T any] struct{}
+
+func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChange) ([]byte, error) {
 	payload := make(map[string]T)
 
 	var columnValues []interface{}
@@ -30,7 +37,7 @@ func prepareMeilisearchPayload[T any](change postgres.WALChange) ([]byte, error)
 	return jsonPayload, nil
 }
 
-func extractIDFromChange[T any](change postgres.WALChange) (T, error) {
+func (p *DefaultMeilisearchProcessor[T]) extractIDFromChange(change postgres.WALChange) (T, error) {
 	var zeroID T
 
 	if change.OldKeys != nil {
