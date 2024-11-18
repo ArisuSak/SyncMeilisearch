@@ -1,15 +1,16 @@
 package meilisearch
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"nats-jetstream/postgres"
 )
 
-type MeilisearchProcessor[T any] interface {
-	PreparePayload(change postgres.WALChange) ([]byte, error)
-	ExtractID(change postgres.WALChange) (T, error)
-}
+// type MeilisearchProcessor[T any] interface {
+// 	PreparePayload(change postgres.WALChange) ([]byte, error)
+// 	ExtractID(change postgres.WALChange) (T, error)
+// }
 
 type DefaultMeilisearchProcessor[T any] struct{}
 
@@ -63,37 +64,38 @@ func (p *DefaultMeilisearchProcessor[T]) extractIDFromChange(change postgres.WAL
 	return zeroID, fmt.Errorf("ID column not found in oldkeys")
 }
 
-// func fetchDataFromDatabase(db *sql.DB) ([]map[string]interface{}, error) {
-//     rows, err := db.Query("SELECT * FROM main.tenants")
+func (m *MeiliSearchHandler) fetchDataFromDatabase(db *sql.DB) ([]map[string]interface{}, error) {
+	query := fmt.Sprintf("SELECT * FROM %s", m.TableName)
+	rows, err := db.Query(query)
 
-//     if err != nil {
-//         return nil, fmt.Errorf("failed to query from Database: %v", err)
-//     }
-//     defer rows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to query from Database: %v", err)
+	}
+	defer rows.Close()
 
-//     columns, err := rows.Columns()
-//     if err != nil {
-//         return nil, fmt.Errorf("failed to get columns: %v", err)
-//     }
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get columns: %v", err)
+	}
 
-//     var documents []map[string]interface{}
-//     for rows.Next() {
-//         values := make([]interface{}, len(columns))
-//         valuePtrs := make([]interface{}, len(columns))
-//         for i := range values {
-//             valuePtrs[i] = &values[i]
-//         }
+	var documents []map[string]interface{}
+	for rows.Next() {
+		values := make([]interface{}, len(columns))
+		valuePtrs := make([]interface{}, len(columns))
+		for i := range values {
+			valuePtrs[i] = &values[i]
+		}
 
-//         if err := rows.Scan(valuePtrs...); err != nil {
-//             return nil, fmt.Errorf("failed to scan row: %v", err)
-//         }
+		if err := rows.Scan(valuePtrs...); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
 
-//         doc := make(map[string]interface{})
-//         for i, col := range columns {
-//             doc[col] = values[i]
-//         }
-//         documents = append(documents, doc)
-//     }
+		doc := make(map[string]interface{})
+		for i, col := range columns {
+			doc[col] = values[i]
+		}
+		documents = append(documents, doc)
+	}
 
-//     return documents, nil
-// }
+	return documents, nil
+}

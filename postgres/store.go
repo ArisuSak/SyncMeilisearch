@@ -16,12 +16,11 @@ import (
 )
 
 const (
-	Host      = "localhost"
-	Port      = 5437
-	Database  = "pylon"
-	User      = "postgres"
-	Password  = "sonoftruth"
-	TableName = "tenants"
+	Host     = "localhost"
+	Port     = 5437
+	Database = "pylon"
+	User     = "postgres"
+	Password = "sonoftruth"
 )
 
 type Store struct {
@@ -65,7 +64,7 @@ func New(ctx context.Context, logger *log.Logger) *Store {
 	return &store
 }
 
-func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jetstreamSubject string, l *log.Logger) {
+func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jetstreamSubject string, tableName string, l *log.Logger) {
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?replication=database&application_name=salesquake&sslmode=disable", User, Password, Host, Port, Database)
 	conn, err := pgconn.Connect(ctx, dsn)
 	if err != nil {
@@ -73,7 +72,7 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
 	}
 	defer conn.Close(ctx)
 
-	setupReplication(ctx, conn, l)
+	setupReplication(ctx, conn, tableName, l)
 
 	sysident, err := IdentifySystem(ctx, conn)
 	if err != nil {
@@ -161,8 +160,8 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
 	}
 }
 
-func setupReplication(ctx context.Context, conn *pgconn.PgConn, l *log.Logger) {
-	query := fmt.Sprintf("CREATE PUBLICATION replication_demo FOR TABLE %s;", TableName)
+func setupReplication(ctx context.Context, conn *pgconn.PgConn, tableName string, l *log.Logger) {
+	query := fmt.Sprintf("CREATE PUBLICATION replication_demo FOR TABLE %s;", tableName)
 	result := conn.Exec(ctx, query)
 
 	_, err := result.ReadAll()

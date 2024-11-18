@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"os"
 
 	"nats-jetstream/meilisearch"
 	"nats-jetstream/nat"
 	"nats-jetstream/postgres"
+
+	"go.uber.org/zap"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
@@ -26,6 +31,10 @@ const (
 )
 
 // TODO: change log to zap.log all
+// TODO: add error handling
+// TODO: add graceful shutdown
+// TODO: add tests
+// TODO: InitalData
 func main() {
 	ctx := context.Background()
 
@@ -38,7 +47,11 @@ func main() {
 	}
 
 	log.Printf("Connection to PostgreSQL successfully")
-
+	dsn := store.DSN
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		logger.Fatal("Failed to open PostgreSQL with DSN", zap.Error(err))
+	}
 	connector := &nat.URLConnector{URL: Url}
 
 	nc, js, err := connector.Connect(true)
@@ -48,14 +61,20 @@ func main() {
 	}
 	defer nc.Close()
 
-	go postgres.StartReplicationDatabase(ctx, js.(*nat.JetStreamContextImpl).JS, Subject, logger)
+	go postgres.StartReplicationDatabase(ctx, js.(*nat.JetStreamContextImpl).JS, Subject, MeiliTable, logger)
 	subManager := &nat.SubscriptionManagerImpl{JetStream: js}
 
 	meiliHandler := &meilisearch.MeiliSearchHandler{
-		BaseURL:   MeiliBaseURL,
-		ApiKey:    MeiliApiKey,
-		TableName: MeiliTable,
-		Index:     MeiliIndex,
+		BaseURL:        MeiliBaseURL,
+		ApiKey:         MeiliApiKey,
+		TableName:      MeiliTable,
+		Index:          MeiliIndex,
+		DB:             db,
+		EnableInitData: true,
+	}
+
+	if err := meiliHandler.InitializeData(logger); err != nil {
+		logger.Fatal("Failed to initialize Meilisearch data", zap.Error(err))
 	}
 
 	err = subManager.SubscribeAsyncWithHandler(Subject, DurableName, meiliHandler, logger)
