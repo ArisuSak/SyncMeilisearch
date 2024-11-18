@@ -42,7 +42,6 @@ func NewMeiliSearchHandler(db *sql.DB, baseURL, apiKey, tableName, index string,
 		DB:             db,
 	}
 
-	// Automatically trigger initialization if enabled
 	if enableInitData {
 		logger.Println("Auto-initializing Meilisearch data...")
 		if err := handler.InitializeData(logger); err != nil {
