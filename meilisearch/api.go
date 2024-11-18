@@ -19,8 +19,6 @@ func (m *MeiliSearchHandler) ProcessWalData(data []byte, l *log.Logger) error {
 		return err
 	}
 
-	l.Println("WAL Data:", walData)
-
 	for _, change := range walData.Change {
 		if err := m.ProcessChange(change); err != nil {
 			l.Printf("Error processing change: %v", err)
@@ -44,8 +42,6 @@ func (m *MeiliSearchHandler) ProcessChange(change postgres.WALChange) error {
 			return fmt.Errorf("failed to prepare payload: %w", err)
 		}
 		payload = preparePayload
-
-		fmt.Println("Successfully prepared payload:", string(payload))
 
 		method = "POST"
 		endpoint = fmt.Sprintf("%s/indexes/%s/documents", m.BaseURL, m.Index)
