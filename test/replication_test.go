@@ -64,14 +64,14 @@ func TestReadMessages(t *testing.T) {
 		pluginArguments = []string{"\"pretty-print\" 'true'"}
 	}
 
-	sysident, err := IdentifySystem(ctx, conn)
+	sysident, err := postgres.IdentifySystem(ctx, conn)
 	if err != nil {
 		log.Fatalln("IdentifySystem failed:", err)
 	}
 	log.Println("SystemID:", sysident.SystemID, "Timeline:", sysident.Timeline, "XLogPos:", sysident.XLogPos, "DBName:", sysident.DBName)
 
 	slotName := "replication_demo"
-	err = StartReplication(ctx, conn, slotName, sysident.XLogPos, StartReplicationOptions{PluginArgs: pluginArguments})
+	err = postgres.StartReplication(ctx, conn, slotName, sysident.XLogPos, postgres.StartReplicationOptions{PluginArgs: pluginArguments})
 	if err != nil {
 		log.Fatalln("StartReplication failed:", err)
 	}
@@ -162,7 +162,7 @@ loop:
 			}
 
 		case postgres.XLogDataByteID:
-			xld, err := ParseXLogData(msg.Data[1:])
+			xld, err := postgres.ParseXLogData(msg.Data[1:])
 			if err != nil {
 				log.Fatalln("ParseXLogData failed:", err)
 			}
@@ -183,25 +183,25 @@ loop:
 	}
 }
 
-func processV2(walData []byte, relations map[uint32]*RelationMessageV2, typeMap *pgtype.Map, inStream *bool) {
-	logicalMsg, err := ParseV2(walData, *inStream)
+func processV2(walData []byte, relations map[uint32]*postgres.RelationMessageV2, typeMap *pgtype.Map, inStream *bool) {
+	logicalMsg, err := postgres.ParseV2(walData, *inStream)
 	if err != nil {
 		log.Fatalf("Parse logical replication message: %s", err)
 	}
 
 	log.Printf("Receive a logical replication message: %s", logicalMsg.Type())
 	switch logicalMsg := logicalMsg.(type) {
-	case *RelationMessageV2:
+	case *postgres.RelationMessageV2:
 		relations[logicalMsg.RelationID] = logicalMsg
 
-	case *BeginMessage:
+	case *postgres.BeginMessage:
 		// Indicates the beginning of a group of changes in a transaction. This
 		// is only sent for committed transactions. You won't get any events
 		// from rolled back transactions.
 
-	case *CommitMessage:
+	case *postgres.CommitMessage:
 
-	case *InsertMessageV2:
+	case *postgres.InsertMessageV2:
 		rel, ok := relations[logicalMsg.RelationID]
 		if !ok {
 			log.Fatalf("unknown relation ID %d", logicalMsg.RelationID)
@@ -227,31 +227,31 @@ func processV2(walData []byte, relations map[uint32]*RelationMessageV2, typeMap 
 		log.Printf("insert for xid %d\n", logicalMsg.Xid)
 		log.Printf("INSERT INTO %s.%s: %v", rel.Namespace, rel.RelationName, values)
 
-	case *UpdateMessageV2:
+	case *postgres.UpdateMessageV2:
 		log.Printf("update for xid %d\n", logicalMsg.Xid)
 		// ...
-	case *DeleteMessageV2:
+	case *postgres.DeleteMessageV2:
 		log.Printf("delete for xid %d\n", logicalMsg.Xid)
 		// ...
-	case *TruncateMessageV2:
+	case *postgres.TruncateMessageV2:
 		log.Printf("truncate for xid %d\n", logicalMsg.Xid)
 		// ...
 
-	case *TypeMessageV2:
-	case *OriginMessage:
+	case *postgres.TypeMessageV2:
+	case *postgres.OriginMessage:
 
-	case *LogicalDecodingMessageV2:
+	case *postgres.LogicalDecodingMessageV2:
 		log.Printf("Logical decoding message: %q, %q, %d", logicalMsg.Prefix, logicalMsg.Content, logicalMsg.Xid)
 
-	case *StreamStartMessageV2:
+	case *postgres.StreamStartMessageV2:
 		*inStream = true
 		log.Printf("Stream start message: xid %d, first segment? %d", logicalMsg.Xid, logicalMsg.FirstSegment)
-	case *StreamStopMessageV2:
+	case *postgres.StreamStopMessageV2:
 		*inStream = false
 		log.Printf("Stream stop message")
-	case *StreamCommitMessageV2:
+	case *postgres.StreamCommitMessageV2:
 		log.Printf("Stream commit message: xid %d", logicalMsg.Xid)
-	case *StreamAbortMessageV2:
+	case *postgres.StreamAbortMessageV2:
 		log.Printf("Stream abort message: xid %d", logicalMsg.Xid)
 	default:
 		log.Printf("Unknown message type in pgoutput stream: %T", logicalMsg)

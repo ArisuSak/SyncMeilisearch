@@ -21,7 +21,7 @@ func InitializeMeilisearchData(db *sql.DB, handler *MeiliSearchHandler, l *log.L
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP request: %v", err)
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", handler.ApiKey))
+	MeilisearchHeader(req, handler.ApiKey)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

@@ -13,26 +13,43 @@ import (
 	"go.uber.org/zap"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 )
 
-const (
-	Subject      = "TEST_SUBJECT"
-	StreamName   = "TEST_STREAM"
-	ConsumerName = "TEST_CONSUMER"
-	DurableName  = "TEST_DURABLE"
-	Url          = "localhost:4222"
+var (
+	Subject      string
+	StreamName   string
+	ConsumerName string
+	DurableName  string
+	Url          string
+
+	MeiliBaseURL string
+	MeiliApiKey  string
+	MeiliTable   string
+	MeiliIndex   string
 )
 
-const (
-	MeiliBaseURL = "http://localhost:7700"
-	MeiliApiKey  = "my-key"
-	MeiliTable   = "main.tenants"
-	MeiliIndex   = "tenant"
-)
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	Subject = os.Getenv("SUBJECT")
+	StreamName = os.Getenv("STREAM_NAME")
+	ConsumerName = os.Getenv("CONSUMER_NAME")
+	DurableName = os.Getenv("DURABLE_NAME")
+	Url = os.Getenv("NATS_URL")
+
+	MeiliBaseURL = os.Getenv("MEILI_BASE_URL")
+	MeiliApiKey = os.Getenv("MEILI_API_KEY")
+	MeiliTable = os.Getenv("MEILI_TABLE")
+	MeiliIndex = os.Getenv("MEILI_INDEX")
+}
 
 func main() {
 	ctx := context.Background()
-
+	godotenv.Load()
 	logger := log.New(os.Stdout, "postgres: ", log.LstdFlags)
 
 	store := postgres.New(ctx, logger)
@@ -47,6 +64,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to open PostgreSQL with DSN", zap.Error(err))
 	}
+
 	connector := &nat.URLConnector{URL: Url}
 
 	nc, js, err := connector.Connect(true)
@@ -65,7 +83,7 @@ func main() {
 		TableName:      MeiliTable,
 		Index:          MeiliIndex,
 		DB:             db,
-		EnableInitData: true,
+		EnableInitData: false,
 	}
 
 	if err := meiliHandler.InitializeData(logger); err != nil {

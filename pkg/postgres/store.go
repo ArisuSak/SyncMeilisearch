@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -11,17 +12,32 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgproto3"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
 
-const (
-	Host     = "localhost"
-	Port     = 5437
-	Database = "pylon"
-	User     = "postgres"
-	Password = "sonoftruth"
+var (
+	Host     string
+	Port     string
+	Database string
+	User     string
+	Password string
 )
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	Host = os.Getenv("DB_HOST")
+	Port = os.Getenv("DB_PORT")
+	Database = os.Getenv("DB_NAME")
+	User = os.Getenv("DB_USER")
+	Password = os.Getenv("DB_PASSWORD")
+
+}
 
 type Store struct {
 	Pool   *pgxpool.Pool
@@ -30,7 +46,7 @@ type Store struct {
 }
 
 func New(ctx context.Context, logger *log.Logger) *Store {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?application_name=pylon&sslmode=disable", User, Password, Host, Port, Database)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?application_name=pylon&sslmode=disable", User, Password, Host, Port, Database)
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		logger.Fatal("error parsing configuration", zap.Error(err))
@@ -65,7 +81,7 @@ func New(ctx context.Context, logger *log.Logger) *Store {
 }
 
 func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jetstreamSubject string, tableName string, l *log.Logger) {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?replication=database&application_name=salesquake&sslmode=disable", User, Password, Host, Port, Database)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?replication=database&application_name=salesquake&sslmode=disable", User, Password, Host, Port, Database)
 	conn, err := pgconn.Connect(ctx, dsn)
 	if err != nil {
 		l.Fatal("error connecting to postgres", zap.Error(err))

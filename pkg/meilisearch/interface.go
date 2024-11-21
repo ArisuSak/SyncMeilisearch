@@ -59,7 +59,7 @@ func (m *MeiliSearchHandler) InitializeData(l *log.Logger) error {
 		return nil
 	}
 
-	l.Println("Data initialization for Meilisearch is enable")
+	l.Println("Data initialization for Meilisearch is enable", m.DB)
 
 	return InitializeMeilisearchData(m.DB, m, l)
 }
