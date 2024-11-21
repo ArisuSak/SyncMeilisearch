@@ -24,14 +24,6 @@ type MeiliSearchHandler struct {
 	DB             *sql.DB
 }
 
-//	func NewMeiliSearchHandler(baseURL, apiKey string, tableName string, index string) *MeiliSearchHandler {
-//		return &MeiliSearchHandler{
-//			BaseURL:   baseURL,
-//			ApiKey:    apiKey,
-//			TableName: tableName,
-//			Index:     index,
-//		}
-//	}
 func NewMeiliSearchHandler(db *sql.DB, baseURL, apiKey, tableName, index string, enableInitData bool, logger *log.Logger) (*MeiliSearchHandler, error) {
 	handler := &MeiliSearchHandler{
 		BaseURL:        baseURL,

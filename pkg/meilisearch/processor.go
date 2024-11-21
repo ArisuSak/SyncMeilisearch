@@ -4,13 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"nats-jetstream/postgres"
+	"nats-jetstream/pkg/postgres"
 )
-
-// type MeilisearchProcessor[T any] interface {
-// 	PreparePayload(change postgres.WALChange) ([]byte, error)
-// 	ExtractID(change postgres.WALChange) (T, error)
-// }
 
 type DefaultMeilisearchProcessor[T any] struct{}
 

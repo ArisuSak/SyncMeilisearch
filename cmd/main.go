@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"nats-jetstream/meilisearch"
-	"nats-jetstream/nat"
-	"nats-jetstream/postgres"
+	"nats-jetstream/pkg/meilisearch"
+	"nats-jetstream/pkg/nat"
+	"nats-jetstream/pkg/postgres"
 
 	"go.uber.org/zap"
 
@@ -30,11 +30,6 @@ const (
 	MeiliIndex   = "tenant"
 )
 
-// TODO: change log to zap.log all
-// TODO: add error handling
-// TODO: add graceful shutdown
-// TODO: add tests
-// TODO: InitalData
 func main() {
 	ctx := context.Background()
 

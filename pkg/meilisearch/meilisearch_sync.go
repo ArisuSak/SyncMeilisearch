@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"nats-jetstream/postgres"
+	"nats-jetstream/pkg/postgres"
 	"net/http"
 )
 
@@ -67,6 +67,7 @@ func (m *MeiliSearchHandler) sendHTTPRequest(method, endpoint string, payload []
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", m.ApiKey))
 
+	MeilisearchHeader(req, m.ApiKey)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -115,9 +116,8 @@ func InitializeMeilisearchData(db *sql.DB, handler *MeiliSearchHandler, l *log.L
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP request: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", handler.ApiKey))
 
+	MeilisearchHeader(req, handler.ApiKey)
 	resp, err = client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send HTTP request: %v", err)
