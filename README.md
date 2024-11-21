@@ -10,8 +10,12 @@ This project demonstrates how to integrate NATS JetStream with PostgreSQL and Me
 - Meilisearch
 
 ## Run application
+```sh
 cd nats-jetstream
+```
+```sh
 go run cmd/main.go
+```
 
 # Install dependencies:
 go mod tidy
