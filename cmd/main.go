@@ -50,7 +50,7 @@ func init() {
 func main() {
 	ctx := context.Background()
 	godotenv.Load()
-	logger := log.New(os.Stdout, "postgres: ", log.LstdFlags)
+	logger := log.New(os.Stdout, "jet stream: ", log.LstdFlags)
 
 	store := postgres.New(ctx, logger)
 
