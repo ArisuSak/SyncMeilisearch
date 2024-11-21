@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"nats-jetstream/pkg/postgres"
 	"testing"
@@ -16,8 +17,8 @@ const outputPlugin = "wal2json"
 
 func TestReadMessages(t *testing.T) {
 	ctx := context.Background()
-	//conn, err := pgconn.Connect(ctx,"postgres://postgres:sonoftruth@localhost:5437/{here}?replication=database&application_name=pylon")
-	conn, err := pgconn.Connect(ctx, "postgres://postgres:sonoftruth@localhost:5437/pylon?replication=database&application_name=pylon")
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?replication=database&application_name=salesquake&sslmode=disable", User, Password, Host, Port, Database)
+	conn, err := pgconn.Connect(ctx, dsn)
 	if err != nil {
 		t.Fatal("error connecting to postgres", err)
 	}

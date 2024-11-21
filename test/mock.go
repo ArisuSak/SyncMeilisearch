@@ -2,19 +2,36 @@ package test
 
 import (
 	"context"
+	"log"
+	"os"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 )
 
-const (
-	Host     = "localhost"
-	Port     = 5437
-	Database = "pylon"
-	User     = "postgres"
-	Password = "sonoftruth"
+var (
+	Host     string
+	Port     string
+	Database string
+	User     string
+	Password string
 )
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	Host = os.Getenv("DB_HOST")
+	Port = os.Getenv("DB_PORT")
+	Database = os.Getenv("DB_NAME")
+	User = os.Getenv("DB_USER")
+	Password = os.Getenv("DB_PASSWORD")
+
+}
 
 type MockJetStreamContext struct {
 	mock.Mock
