@@ -81,7 +81,11 @@ func New(ctx context.Context, logger *log.Logger) *Store {
 }
 
 func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jetstreamSubject string, tableName string, l *log.Logger) {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?replication=database&application_name=salesquake&sslmode=disable", User, Password, Host, Port, Database)
+	applicationName := "replication"
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?replication=database&application_name=%s&sslmode=disable",
+		User, Password, Host, Port, Database, applicationName,
+	)
 	conn, err := pgconn.Connect(ctx, dsn)
 	if err != nil {
 		l.Fatal("error connecting to postgres", zap.Error(err))
