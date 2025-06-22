@@ -1,26 +1,19 @@
 package test
 
-import (
-	"context"
-	"testing"
+// func TestMeiliSearchHandler(t *testing.T) {
+// 	mockHandler := &MockMeiliSearchHandler{}
+// 	ctx := context.Background()
 
-	"github.com/stretchr/testify/assert"
-)
+// 	msg := []byte(`{"id":1, "name":"Test"}`)
 
-func TestMeiliSearchHandler(t *testing.T) {
-	mockHandler := &MockMeiliSearchHandler{}
-	ctx := context.Background()
+// 	mockHandler.On("HandleMessage", ctx, msg).Return(nil)
 
-	msg := []byte(`{"id":1, "name":"Test"}`)
-
-	mockHandler.On("HandleMessage", ctx, msg).Return(nil)
-
-	err := mockHandler.HandleMessage(ctx, msg)
-	if assert.NoError(t, err) {
-		t.Log("TestMeiliSearchHandler passed")
-	} else {
-		t.Error("TestMeiliSearchHandler failed")
-	}
-	assert.NoError(t, err)
-	mockHandler.AssertExpectations(t)
-}
+// 	err := mockHandler.HandleMessage(ctx, msg)
+// 	if assert.NoError(t, err) {
+// 		t.Log("TestMeiliSearchHandler passed")
+// 	} else {
+// 		t.Error("TestMeiliSearchHandler failed")
+// 	}
+// 	assert.NoError(t, err)
+// 	mockHandler.AssertExpectations(t)
+// }

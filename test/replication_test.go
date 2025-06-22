@@ -104,7 +104,7 @@ func TestReadMessages(t *testing.T) {
 	clientXLogPos := sysident.XLogPos
 	standbyMessageTimeout := time.Second * 10
 	nextStandbyMessageDeadline := time.Now().Add(standbyMessageTimeout)
-	relationsV2 := map[uint32]*RelationMessageV2{}
+	relationsV2 := map[uint32]*postgres.RelationMessageV2{}
 	typeMap := pgtype.NewMap()
 
 	inStream := false
