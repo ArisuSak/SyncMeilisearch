@@ -58,7 +58,9 @@ After making these changes, restart your PostgreSQL server for the settings to t
 
 These configurations ensure PostgreSQL can stream WAL changes, which the application uses to sync data between PostgreSQL and Meilisearch via NATS JetStream.
 
-Important environment variables:
+---
+
+## Important environment variables:
 
 ```sh
 # NATS JetStream
