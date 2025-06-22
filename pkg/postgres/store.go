@@ -162,11 +162,15 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
 
 			l.Println("wal2json data", zap.String("data", string(xld.WALData)))
 
-			_, errPub := js.PublishAsync(jetstreamSubject, xld.WALData)
-			if errPub != nil {
-				l.Fatal("Failed to publish WAL data to NATS", zap.Error(errPub))
+			if js != nil {
+				_, errPub := js.PublishAsync(jetstreamSubject, xld.WALData)
+				if errPub != nil {
+					l.Fatal("Failed to publish WAL data to NATS", zap.Error(errPub))
+				} else {
+					l.Print("Successfully initiated async publish of WAL data to NATS", zap.String("data", string(xld.WALData)))
+				}
 			} else {
-				l.Print("Successfully initiated async publish of WAL data to NATS", zap.String("data", string(xld.WALData)))
+				l.Print("JetStream is disabled; skipping publish", zap.String("data", string(xld.WALData)))
 			}
 
 			if xld.WALStart > clientXLogPos {
