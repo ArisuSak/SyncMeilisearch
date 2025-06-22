@@ -1,12 +1,13 @@
-# NATS JetStream Integration
+# Synchronize Meilisearch in Go
 
-This project demonstrates how to integrate NATS JetStream with PostgreSQL and Meilisearch for seamless data synchronization using Write-Ahead Logs (WAL) and Go.
+This project syncs data between PostgreSQL and Meilisearch using PostgreSQL's Write-Ahead Logs (WAL) in Go.  
+It provides an option to stream data changes using NATS JetStream for real-time synchronization.
 
 ## Prerequisites
 
 - Go 1.16 or later
 - PostgreSQL
-- NATS Server
+- NATS Server (optional)
 - Meilisearch
 
 ## Install Dependencies
