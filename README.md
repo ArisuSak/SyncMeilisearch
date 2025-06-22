@@ -16,7 +16,47 @@ It provides an option to stream data changes using NATS JetStream for real-time 
 go mod tidy
 ```
 
+## PostgreSQL Configuration for WAL Replication
+
+To enable data synchronization using PostgreSQL's Write-Ahead Logs (WAL), you need to adjust your PostgreSQL server settings.
+
+### Update `postgresql.conf`:
+
+- Set the WAL level to `logical` to allow logical replication:
+
 Create a .env file based on the .env.example template and configure your environment variables.
+
+```sh
+wal_level = logical
+```
+
+- Increase the maximum number of replication slots:
+
+```sh
+max_replication_slots = 4
+```
+
+- Increase the maximum number of WAL senders:
+
+```sh
+max_wal_senders = 4
+```
+
+### Update `pg_hba.conf`:
+
+Add a line to allow replication connections (adjust IP range as needed):
+
+```sh
+host replication all 0.0.0.0/0 md5
+```
+
+### Restart PostgreSQL:
+
+After making these changes, restart your PostgreSQL server for the settings to take effect.
+
+---
+
+These configurations ensure PostgreSQL can stream WAL changes, which the application uses to sync data between PostgreSQL and Meilisearch via NATS JetStream.
 
 Important environment variables:
 
