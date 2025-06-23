@@ -1,0 +1,22 @@
+meilisearch:
+  api_url: http://localhost:7700
+  api_key: "idk"
+  insert_size: 1000
+  insert_interval: 10
+database:
+  type: postgres
+  host: localhost
+  port: 5432
+  database: mydb
+  user: myuser
+  password: mypassword
+sync:
+  - table: table_1_name
+    index: index_name
+    pk: primary_key_name
+  - table: table_2_name
+    index: index_name
+    pk: primary_key_name
+  - table: table_3_name
+    index: index_name
+    pk: primary_key_name

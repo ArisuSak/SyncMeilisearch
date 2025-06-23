@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 
+	meili "github.com/meilisearch/meilisearch-go"
 	"go.uber.org/zap"
 )
 
@@ -16,26 +17,36 @@ type DatabaseInitializer interface {
 }
 
 type MeiliSearchHandler struct {
+	Client         meili.ServiceManager
 	BaseURL        string
 	ApiKey         string
 	TableName      string
 	Index          string
+	PK 		       string 
 	EnableInitData bool
 	DB             *sql.DB
 }
 
-func NewMeiliSearchHandler(db *sql.DB, baseURL, apiKey, tableName, index string, enableInitData bool, logger *log.Logger) (*MeiliSearchHandler, error) {
+func NewMeiliSearchHandler(db *sql.DB, client  meili.ServiceManager, baseURL, apiKey, tableName, index string, pk string, enableInitData bool, logger *log.Logger) (*MeiliSearchHandler, error) {
 	handler := &MeiliSearchHandler{
+		Client:         client,
 		BaseURL:        baseURL,
 		ApiKey:         apiKey,
 		TableName:      tableName,
 		Index:          index,
+		PK:			    pk,
 		EnableInitData: enableInitData,
 		DB:             db,
 	}
+	logger.Println("Asssinitializing Meilisearch data...")
+	//Check and Create the Index
+	if err := handler.CreateIndex(client, logger, index, pk); 
+	err != nil {
+		logger.Printf("failed to create Meilisearch index: %v", err)
+		return nil, err
+	}
 
 	if enableInitData {
-		logger.Println("Auto-initializing Meilisearch data...")
 		if err := handler.InitializeData(logger); err != nil {
 			return nil, err
 		}
@@ -61,5 +72,5 @@ func (m *MeiliSearchHandler) InitializeData(l *log.Logger) error {
 
 	l.Println("Data initialization for Meilisearch is enable", m.DB)
 
-	return InitializeMeilisearchData(m.DB, m, l)
+	return InitializeMeilisearchDataByClient(m.DB, m, m.Client,l, m.Index, m.PK)
 }
