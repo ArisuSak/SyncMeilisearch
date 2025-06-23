@@ -2,8 +2,12 @@ module nats-jetstream
 
 go 1.22.0
 
+require github.com/meilisearch/meilisearch-go v0.32.0
+
 require (
+	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/jackc/chunkreader v1.0.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.3 // indirect
@@ -15,7 +19,9 @@ require (
 	github.com/jackc/pgx/v5 v5.7.1 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/nats-io/jwt/v2 v2.5.8 // indirect
 	github.com/nats-io/nats-server/v2 v2.10.22 // indirect

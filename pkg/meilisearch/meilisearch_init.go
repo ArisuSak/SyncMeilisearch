@@ -8,9 +8,82 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	meili "github.com/meilisearch/meilisearch-go"
 )
 
-func InitializeMeilisearchData(db *sql.DB, handler *MeiliSearchHandler, l *log.Logger) error {
+func (m *MeiliSearchHandler) CreateIndex(
+	meiliClient meili.ServiceManager,
+	l *log.Logger,
+	index string,
+	pk string,
+) error {
+	// Try to get the existing index
+	existingIndex, err := meiliClient.GetIndex(index)
+	if err != nil {
+		if apiErr, ok := err.(*meili.Error); ok && apiErr.MeilisearchApiError.Code == "index_not_found" {
+			_, err := meiliClient.CreateIndex(&meili.IndexConfig{
+				Uid:        index,
+				PrimaryKey: pk,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create index: %v", err)
+			}
+			l.Printf("Created index %q with primary key %q", index, pk)
+			return nil
+		}
+		return fmt.Errorf("failed to get index: %v", err)
+	}
+
+	// Index exists, check primary key
+	if existingIndex.PrimaryKey == "" {
+		l.Printf("Index %q exists but has no primary key. Deleting and recreating with primary key %q", index, pk)
+
+		_, err := meiliClient.DeleteIndex(index)
+		if err != nil {
+			return fmt.Errorf("failed to delete index: %v", err)
+		}
+
+		_, err = meiliClient.CreateIndex(&meili.IndexConfig{
+			Uid:        index,
+			PrimaryKey: pk,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to recreate index: %v", err)
+		}
+
+		l.Printf("Recreated index %q with primary key %q", index, pk)
+	} else {
+		l.Printf("Index %q already exists with primary key %q", index, existingIndex.PrimaryKey)
+	}
+
+	return nil
+}
+
+
+func InitializeMeilisearchDataByClient(
+	db *sql.DB,
+	handler *MeiliSearchHandler,
+	meiliClient meili.ServiceManager,
+	l *log.Logger,
+	index string ,
+	pk string,
+) error {
+	documents, err := handler.fetchDataFromDatabase(db)
+	if err != nil {
+		return fmt.Errorf("failed to fetch data from PostgreSQL: %v", err)
+	}
+
+	_, err = meiliClient.Index(index).AddDocuments(documents, pk)
+	if err != nil {
+		return fmt.Errorf("failed to add documents to Meilisearch: %v", err)
+	}
+
+	l.Printf("Successfully initialized Meilisearch index '%s' with %d documents", index, len(documents))
+	return nil
+}
+
+func InitializeMeilisearchData(db *sql.DB, handler *MeiliSearchHandler, meiliClient meili.ServiceManager, l *log.Logger, index string, pk string) error {
 	documents, err := handler.fetchDataFromDatabase(db)
 	if err != nil {
 		return fmt.Errorf("failed to fetch data from PostgreSQL: %v", err)
@@ -18,97 +91,30 @@ func InitializeMeilisearchData(db *sql.DB, handler *MeiliSearchHandler, l *log.L
 
 	client := &http.Client{}
 
-	// 1. Check if index has primary key
-	indexEndpoint := fmt.Sprintf("%s/indexes/%s", handler.BaseURL, handler.Index)
-	req, err := http.NewRequest("GET", indexEndpoint, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create HTTP request: %v", err)
-	}
-	MeilisearchHeader(req, handler.ApiKey)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to send HTTP request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	var meta struct {
-		PrimaryKey *string `json:"primaryKey"`
-	}
-	if resp.StatusCode == http.StatusOK {
-		if err := json.NewDecoder(resp.Body).Decode(&meta); err != nil {
-			return fmt.Errorf("failed to decode index metadata: %v", err)
-		}
-	} else if resp.StatusCode == 404 {
-		// Index does not exist yet
-		meta.PrimaryKey = nil
-	} else {
-		return fmt.Errorf("failed to get index info: status %v", resp.Status)
-	}
-
-	// 2. If primary key is not set, set it
-	if meta.PrimaryKey == nil {
-		l.Println("Setting primary key on index before adding documents")
-		settings := map[string]string{
-			"primaryKey": "research_paper_id",
-		}
-		settingsBody, err := json.Marshal(settings)
-		if err != nil {
-			return fmt.Errorf("failed to marshal index settings: %v", err)
-		}
-
-		reqSettings, err := http.NewRequest("PATCH", indexEndpoint, bytes.NewBuffer(settingsBody))
-		if err != nil {
-			return fmt.Errorf("failed to create index settings request: %v", err)
-		}
-		reqSettings.Header.Set("Content-Type", "application/json")
-		MeilisearchHeader(reqSettings, handler.ApiKey)
-
-		respSettings, err := client.Do(reqSettings)
-		if err != nil {
-			return fmt.Errorf("failed to update index settings: %v", err)
-		}
-		defer respSettings.Body.Close()
-
-		if respSettings.StatusCode < 200 || respSettings.StatusCode >= 300 {
-			bodyBytes, _ := io.ReadAll(respSettings.Body)
-			return fmt.Errorf("failed to set primary key: status %v, body: %s", respSettings.Status, string(bodyBytes))
-		}
-
-		l.Println("Primary key set successfully")
-	} else {
-		l.Printf("Primary key already set: %s\n", *meta.PrimaryKey)
-	}
-
 	for i, doc := range documents {
-		id, ok := doc["research_paper_id"]
+		id, ok := doc[pk]
 		if !ok {
-			l.Printf("Document at index %d missing research_paper_id", i)
+			l.Printf("Document at index %d missing %s", i, pk)
 			continue
 		}
 		doc["uid"] = id
+		doc["PrimaryKey"] = id  
 	}
 
-	// 3. Marshal documents
 	body, err := json.Marshal(documents)
 	if err != nil {
 		return fmt.Errorf("failed to marshal documents: %v", err)
 	}
 
-	// Optional: pretty-print JSON
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, body, "", "  "); err != nil {
-		return fmt.Errorf("failed to format JSON body: %v", err)
-	}
-	fmt.Println("Formatted JSON body:\n", prettyJSON.String())
 
-	// 4. Add documents
-	documentsEndpoint := fmt.Sprintf("%s/indexes/%s/documents", handler.BaseURL, handler.Index)
-	reqAddDocs, err := http.NewRequest("POST", documentsEndpoint, bytes.NewBuffer(prettyJSON.Bytes()))
+	// Add documents
+	documentsEndpoint := fmt.Sprintf("%s/indexes/%s/documents?primaryKey", handler.BaseURL, handler.Index)
+	// reqAddDocs, err := http.NewRequest("POST", documentsEndpoint, bytes.NewBuffer(prettyJSON.Bytes()))
+	reqAddDocs, err := http.NewRequest("POST", documentsEndpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP request to add documents: %v", err)
 	}
-	reqAddDocs.Header.Set("Content-Type", "application/json")
+
 	MeilisearchHeader(reqAddDocs, handler.ApiKey)
 
 	respAddDocs, err := client.Do(reqAddDocs)
@@ -122,7 +128,6 @@ func InitializeMeilisearchData(db *sql.DB, handler *MeiliSearchHandler, l *log.L
 		return fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	l.Printf("Response status from Meilisearch: %v", respAddDocs.Status)
 	l.Printf("Response body from Meilisearch: %s", string(bodyBytes))
 
 	if respAddDocs.StatusCode >= 200 && respAddDocs.StatusCode < 300 {

@@ -12,9 +12,13 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgproto3"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
+)
+
+var (
+	database *ApplicationConfig
 )
 
 var (
@@ -26,18 +30,26 @@ var (
 )
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+ 	data, err := os.ReadFile("config.yaml")
+    if err != nil {
+        log.Fatalf("Failed to read YAML file: %v", err)
+    }
 
-	Host = os.Getenv("DB_HOST")
-	Port = os.Getenv("DB_PORT")
-	Database = os.Getenv("DB_NAME")
-	User = os.Getenv("DB_USER")
-	Password = os.Getenv("DB_PASSWORD")
+    var config ApplicationConfig
+    err = yaml.Unmarshal(data, &config)
+    if err != nil {
+        log.Fatalf("Failed to parse YAML file: %v", err)
+    }
 
+    database = &config
+
+	Host = database.Database.Host
+    Port = database.Database.Port
+    Database = database.Database.Name
+    User = database.Database.User
+    Password = database.Database.Password
 }
+
 
 type Store struct {
 	Pool   *pgxpool.Pool
@@ -46,6 +58,9 @@ type Store struct {
 }
 
 func New(ctx context.Context, logger *log.Logger) *Store {
+
+	fmt.Println("Connecting to PostgreSQL database...",Host, Port, Database, User)
+
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?application_name=pylon&sslmode=disable", User, Password, Host, Port, Database)
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
@@ -80,7 +95,7 @@ func New(ctx context.Context, logger *log.Logger) *Store {
 	return &store
 }
 
-func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jetstreamSubject string, tableName string, l *log.Logger) {
+func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jetstreamSubject string, tableName []string, l *log.Logger) {
 	applicationName := "replication"
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?replication=database&application_name=%s&sslmode=disable",
@@ -184,8 +199,16 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
 	}
 }
 
-func setupReplication(ctx context.Context, conn *pgconn.PgConn, tableName string, l *log.Logger) {
-	query := fmt.Sprintf("CREATE PUBLICATION replication_demo FOR TABLE %s;", tableName)
+func setupReplication(ctx context.Context, conn *pgconn.PgConn, tableName []string, l *log.Logger) {
+	if len(tableName) == 0 {
+		l.Println("No tables provided for replication setup")
+		return
+	}
+
+	// Join table names into a comma-separated string
+	tables := strings.Join(tableName, ", ")
+
+	query := fmt.Sprintf("CREATE PUBLICATION replication_demo FOR TABLE %s;", tables)
 	result := conn.Exec(ctx, query)
 
 	_, err := result.ReadAll()
