@@ -33,7 +33,7 @@ func NewMeiliSearchHandler(db *sql.DB, baseURL, apiKey, tableName, index string,
 		EnableInitData: enableInitData,
 		DB:             db,
 	}
-
+	logger.Println("Asssinitializing Meilisearch data...")
 	if enableInitData {
 		logger.Println("Auto-initializing Meilisearch data...")
 		if err := handler.InitializeData(logger); err != nil {

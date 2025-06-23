@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"nats-jetstream/pkg/meilisearch"
-	"nats-jetstream/pkg/nat"
 	"nats-jetstream/pkg/postgres"
 
 	"go.uber.org/zap"
@@ -56,7 +55,7 @@ func init() {
 func main() {
 	ctx := context.Background()
 	godotenv.Load()
-	logger := log.New(os.Stdout, "jet stream: ", log.LstdFlags)
+	logger := log.New(os.Stdout, "SyncMeilisearch: ", log.LstdFlags)
 
 	store := postgres.New(ctx, logger)
 
@@ -78,36 +77,38 @@ func main() {
 		TableName:      MeiliTable,
 		Index:          MeiliIndex,
 		DB:             db,
-		EnableInitData: false,
+		EnableInitData: true,
 	}
+
+     go postgres.StartReplicationDatabase(ctx, nil, "", MeiliTable, logger)
 
 	if err := meiliHandler.InitializeData(logger); err != nil {
 		logger.Fatal("Failed to initialize Meilisearch data", zap.Error(err))
 	}
 
-    if (StreamService == "jetstream") {
-        connector := &nat.URLConnector{URL: Url}
+    // if (StreamService == "jetstream") {
+    //     connector := &nat.URLConnector{URL: Url}
 
-        nc, js, err := connector.Connect(true)
+    //     nc, js, err := connector.Connect(true)
 
-        if err != nil {
-            logger.Fatal("Failed to connect to NATS JetStream:", err)
-        }
+    //     if err != nil {
+    //         logger.Fatal("Failed to connect to NATS JetStream:", err)
+    //     }
 
-        go postgres.StartReplicationDatabase(ctx, js.(*nat.JetStreamContextImpl).JS, Subject, MeiliTable, logger)
+    //     go postgres.StartReplicationDatabase(ctx, js.(*nat.JetStreamContextImpl).JS, Subject, MeiliTable, logger)
 
-	    subManager := &nat.SubscriptionManagerImpl{JetStream: js}
+	//     subManager := &nat.SubscriptionManagerImpl{JetStream: js}
 
-        err = subManager.SubscribeAsyncWithHandler(Subject, DurableName, meiliHandler, logger)
+    //     err = subManager.SubscribeAsyncWithHandler(Subject, DurableName, meiliHandler, logger)
 
-        if err != nil {
-            logger.Fatal("Failed to subcribe with Meilisearch handler:", err)
-        }
+    //     if err != nil {
+    //         logger.Fatal("Failed to subcribe with Meilisearch handler:", err)
+    //     }
 
-        defer nc.Close()
-    } else {
-        go postgres.StartReplicationDatabase(ctx, nil, "", MeiliTable, logger)
-    }
+    //     defer nc.Close()
+    // } else {
+    //     go postgres.StartReplicationDatabase(ctx, nil, "", MeiliTable, logger)
+    // }
 
 	<-ctx.Done()
 

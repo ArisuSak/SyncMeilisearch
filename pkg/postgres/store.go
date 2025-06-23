@@ -174,7 +174,7 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
 					l.Print("Successfully initiated async publish of WAL data to NATS", zap.String("data", string(xld.WALData)))
 				}
 			} else {
-				l.Print("JetStream is disabled; skipping publish", zap.String("data", string(xld.WALData)))
+				l.Print("JetStream is disabled; skipping publish")
 			}
 
 			if xld.WALStart > clientXLogPos {
