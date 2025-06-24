@@ -12,7 +12,6 @@ import (
 
 
 
-
 func main() {
     ctx := context.Background()
     logger := log.New(os.Stdout, "SyncMeilisearch: ", log.LstdFlags)
@@ -52,5 +51,6 @@ func main() {
     logger.Println("Application started successfully")
     
     <-ctx.Done()
+    
     logger.Println("Shutting down application...")
 }

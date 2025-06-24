@@ -60,26 +60,51 @@ These configurations ensure PostgreSQL can stream WAL changes, which the applica
 
 ---
 
-## Important environment variables:
+## Important config variables:
+
+### config.ymal
+
+```sh
+initialize:
+  true
+  # If true, the script will create the necessary tables and indexes in the database.
+  # If false, it will assume the tables and indexes already exist.
+
+meilisearch:
+  api_url: http://localhost:7700
+  api_key: "idk"
+database:
+  type: postgres
+  host: localhost
+  port: 5432
+  database: mydb
+  user: myuser
+  password: mypassword
+sync:
+  - table: table_1_name
+    index: index_name
+    pk: primary_key_name
+  - table: table_2_name
+    index: index_name
+    pk: primary_key_name
+  - table: table_3_name
+    index: index_name
+    pk: primary_key_name
+```
+
+### .env
 
 ```sh
 # NATS JetStream
 STREAMING_SERVICE=none      # option "jetstream, none"
 
-# PostgreSQL connection info
-PG_USER=your_db_user
-PG_PASSWORD=your_db_password
-PG_HOST=localhost
-PG_PORT=5432
-PG_DATABASE=your_database_name
+# NATS confic
+STREAMING_SERVICE=none # Options: jetstream, nats, none
 
-# NATS connection URL
-NATS_URL=nats://localhost:4222
-
-# Meilisearch
-MEILI_BASE_URL=http://localhost:7700
-MEILI_API_KEY=your_meili_api_key
-MEILI_TABLE=your_table_name
-MEILI_INDEX=your_meili_index
+SUBJECT=TEST_SUBJECT
+STREAM_NAME=TEST_STREAM
+CONSUMER_NAME=TEST_CONSUMER
+DURABLE_NAME=TEST_DURABLE
+NATS_URL=localhost:4222
 
 ```
