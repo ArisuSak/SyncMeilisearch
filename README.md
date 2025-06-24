@@ -94,13 +94,13 @@ sync:
 
 ### .env
 
+To enable integration with a streaming service like NATS JetStream, configure the following environment variables in your .env file:
+
 ```sh
-# NATS JetStream
-STREAMING_SERVICE=none      # option "jetstream, none"
+# Streaming Service Type
+STREAMING_SERVICE=none  # Options: "jetstream", "none"
 
-# NATS confic
-STREAMING_SERVICE=none # Options: jetstream, nats, none
-
+# NATS JetStream Configuration
 SUBJECT=TEST_SUBJECT
 STREAM_NAME=TEST_STREAM
 CONSUMER_NAME=TEST_CONSUMER
