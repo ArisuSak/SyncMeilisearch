@@ -1,8 +1,11 @@
+initialize:
+  true
+  # If true, the script will create the necessary tables and indexes in the database.
+  # If false, it will assume the tables and indexes already exist.
+
 meilisearch:
   api_url: http://localhost:7700
   api_key: "idk"
-  insert_size: 1000
-  insert_interval: 10
 database:
   type: postgres
   host: localhost
