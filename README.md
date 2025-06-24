@@ -1,7 +1,16 @@
 # Synchronize Meilisearch in Go
 
-This project syncs data between PostgreSQL and Meilisearch using PostgreSQL's Write-Ahead Logs (WAL) in Go.  
-It provides an option to stream data changes using NATS JetStream for real-time synchronization.
+This project synchronizes data between PostgreSQL and Meilisearch using PostgreSQL's Write-Ahead Logs (WAL) in Go.
+
+It supports real-time synchronization of data changes by reading logical WAL entries and updating Meilisearch indexes accordingly.
+
+Streaming Support with NATS JetStream
+
+For scalable and decoupled event processing, the system optionally streams WAL changes using NATS JetStream. This allows for:
+
+- Real-time data sync between PostgreSQL and Meilisearch.
+
+- Distributed processing of changes using durable and named consumers.
 
 ## Prerequisites
 
