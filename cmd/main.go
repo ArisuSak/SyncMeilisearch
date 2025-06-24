@@ -14,43 +14,6 @@ import (
 )
 
 
-type ApplicationConfig struct {
-    Initialize   bool          `yaml:"initialize"`
-    Database     DatabaseConfig `yaml:"database"`
-    MeiliSearch  MeiliSearchConfig `yaml:"meilisearch"`
-    Sync         []SyncConfig  `yaml:"sync"`
-}
-
-type DatabaseConfig struct {
-    Host     string `yaml:"host"`
-    Port     string `yaml:"port"`
-    Name     string `yaml:"name"`
-    User     string `yaml:"user"`
-    Password string `yaml:"password"`
-}
-
-type Database interface {
-    DSN() string
-}
-
-type MeiliSearchConfig struct {
-    ApiUrl   string `yaml:"api_url"`
-    Port   string `yaml:"port"`
-    ApiKey string `yaml:"api_key"`
-}
-
-type MeiliSearch interface {
-    URL() string
-    Key() string
-}
-
-
-type SyncConfig struct {
-    Table string `yaml:"table"`
-    Index string `yaml:"index"`
-    PK    string `yaml:"pk,omitempty"`
-}
-
 var (
     StreamService string
 
@@ -60,7 +23,7 @@ var (
 	DurableName  string
 	Url          string
 
-    app *ApplicationConfig
+    app *config.ApplicationConfig
 )
 
 
@@ -82,7 +45,7 @@ func init() {
         log.Fatalf("Failed to read YAML file: %v", err)
     }
 
-    var config ApplicationConfig
+    var config config.ApplicationConfig
     err = yaml.Unmarshal(data, &config)
     if err != nil {
         log.Fatalf("Failed to parse YAML file: %v", err)
