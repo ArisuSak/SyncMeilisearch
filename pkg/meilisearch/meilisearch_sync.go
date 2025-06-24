@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"nats-jetstream/pkg/postgres"
 	"net/http"
 )
 
 func (m *MeiliSearchHandler) ProcessWalData(data []byte, l *log.Logger) error {
+
+	l.Printf("WAL data In process: %s", string(data))
 	var walData postgres.WALData
 	err := json.Unmarshal(data, &walData)
+
 	if err != nil {
 		l.Printf("Error unmarshalling WAL data: %v", err)
 		return err
@@ -32,10 +36,13 @@ func (m *MeiliSearchHandler) ProcessChange(change postgres.WALChange) error {
 	var payload []byte
 	processor := DefaultMeilisearchProcessor[string]{}
 
+	changeJSON, _ := json.Marshal(change)
+	fmt.Println("something orginal change:", string(changeJSON))
 	switch change.Kind {
 	case "insert", "update":
 		preparePayload, err := processor.preparePayload(change)
 
+		fmt.Println("change payload", string(preparePayload))
 		if err != nil {
 			return fmt.Errorf("failed to prepare payload: %w", err)
 		}
@@ -58,6 +65,9 @@ func (m *MeiliSearchHandler) ProcessChange(change postgres.WALChange) error {
 }
 
 func (m *MeiliSearchHandler) sendHTTPRequest(method, endpoint string, payload []byte) error {
+
+	log.Printf("Sending %s request to %s with payload: %s", method, endpoint, string(payload))
+
 	req, err := http.NewRequest(method, endpoint, bytes.NewBuffer(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP request: %w", err)
@@ -67,10 +77,22 @@ func (m *MeiliSearchHandler) sendHTTPRequest(method, endpoint string, payload []
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
+	
 	if err != nil {
 		return fmt.Errorf("failed to send HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
+
+		// Read response body
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Print response status and body
+	log.Printf("Response Status: %s", resp.Status)
+	log.Printf("Response Body: %s", string(respBody))
+	
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("request failed with status %s", resp.Status)

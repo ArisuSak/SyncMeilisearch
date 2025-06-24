@@ -1,18 +1,12 @@
-package main
+package config
 
 import (
-	"context"
 	"log"
 	"os"
 
-	"nats-jetstream/config"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
-
 	"gopkg.in/yaml.v3"
 )
-
 
 type ApplicationConfig struct {
     Initialize   bool          `yaml:"initialize"`
@@ -27,10 +21,6 @@ type DatabaseConfig struct {
     Name     string `yaml:"name"`
     User     string `yaml:"user"`
     Password string `yaml:"password"`
-}
-
-type Database interface {
-    DSN() string
 }
 
 type MeiliSearchConfig struct {
@@ -64,7 +54,7 @@ var (
 )
 
 
-func init() {
+func Load() (*ApplicationConfig, error) {
     err := godotenv.Load()
     if err != nil {
         log.Fatal("Error loading .env file")
@@ -89,46 +79,5 @@ func init() {
     }
 
     app = &config
-}
-
-func main() {
-    ctx := context.Background()
-    logger := log.New(os.Stdout, "SyncMeilisearch: ", log.LstdFlags)
-    
-    // Load configuration
-   cfg, err := config.Load()
-    if err != nil {
-        log.Fatal("Failed to load configuration:", err)
-    }
-    
-    // Setup database
-    db, err := config.NewDatabase(ctx, logger)
-    if err != nil {
-        logger.Fatal("Database setup failed:", err)
-    }
-    defer db.Close()
-    
-    // Setup sync manager
-    syncManager := config.NewManager(cfg, db, logger)
-    if err := syncManager.Initialize(); err != nil {
-        logger.Fatal("Sync manager initialization failed:", err)
-    }
-    
-    // Setup streaming service
-    streamingService := config.NewService(cfg, logger)
-    
-    // Start replication
-    if err := streamingService.StartReplication(
-        ctx,
-        syncManager.GetWALCallback(),
-        syncManager.GetTableNames(),
-        syncManager.GetHandlers(),
-    ); err != nil {
-        logger.Fatal("Failed to start replication:", err)
-    }
-    
-    logger.Println("Application started successfully")
-    
-    <-ctx.Done()
-    logger.Println("Shutting down application...")
+	return app, nil
 }

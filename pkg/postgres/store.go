@@ -95,7 +95,7 @@ func New(ctx context.Context, logger *log.Logger) *Store {
 	return &store
 }
 
-func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jetstreamSubject string, tableName []string, l *log.Logger) {
+func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jetstreamSubject string, callback func([]byte),  tableName []string, l *log.Logger) {
 	applicationName := "replication"
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?replication=database&application_name=%s&sslmode=disable",
@@ -180,6 +180,10 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
 			}
 
 			l.Println("wal2json data", zap.String("data", string(xld.WALData)))
+
+			callback(xld.WALData)
+
+			// l.Println("WAL data sent to channel", zap.String("data", string(xld.WALData)))
 
 			if js != nil {
 				_, errPub := js.PublishAsync(jetstreamSubject, xld.WALData)

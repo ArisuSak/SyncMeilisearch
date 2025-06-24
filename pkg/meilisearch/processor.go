@@ -9,8 +9,32 @@ import (
 
 type DefaultMeilisearchProcessor[T any] struct{}
 
+// func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChange) ([]byte, error) {
+// 	payload := make(map[string]T)
+
+// 	var columnValues []interface{}
+// 	if err := json.Unmarshal(change.ColumnValues, &columnValues); err != nil {
+// 		return nil, fmt.Errorf("failed to unmarshal column values: %w", err)
+// 	}
+
+// 	for i, colName := range change.ColumnNames {
+// 		if i < len(columnValues) {
+// 			if value, ok := columnValues[i].(T); ok {
+// 				payload[colName] = value
+// 			}
+// 		}
+// 	}
+
+// 	jsonPayload, err := json.Marshal(payload)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to marshal payload into JSON: %w", err)
+// 	}
+
+// 	return jsonPayload, nil
+// }
+
 func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChange) ([]byte, error) {
-	payload := make(map[string]T)
+	payload := make(map[string]interface{})
 
 	var columnValues []interface{}
 	if err := json.Unmarshal(change.ColumnValues, &columnValues); err != nil {
@@ -19,9 +43,7 @@ func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChang
 
 	for i, colName := range change.ColumnNames {
 		if i < len(columnValues) {
-			if value, ok := columnValues[i].(T); ok {
-				payload[colName] = value
-			}
+			payload[colName] = columnValues[i]
 		}
 	}
 
@@ -32,6 +54,7 @@ func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChang
 
 	return jsonPayload, nil
 }
+
 
 func (p *DefaultMeilisearchProcessor[T]) extractIDFromChange(change postgres.WALChange) (T, error) {
 	var zeroID T
