@@ -33,12 +33,6 @@ func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChang
 	return jsonPayload, nil
 }
 func (p *DefaultMeilisearchProcessor[T]) extractIDFromChange(change postgres.WALChange) (string, error) {
-    if changeJson, err := json.MarshalIndent(change, "", "  "); err == nil {
-        fmt.Println("extractIDFromChange called with change:", string(changeJson))
-    } else {
-        fmt.Println("Failed to marshal change:", err)
-    }
-
     if change.OldKeys == nil {
         return "", fmt.Errorf("oldkeys field is missing")
     }
@@ -49,7 +43,6 @@ func (p *DefaultMeilisearchProcessor[T]) extractIDFromChange(change postgres.WAL
         return "", fmt.Errorf("failed to unmarshal key values: %w", err)
     }
 
-    fmt.Printf("Debug: Unmarshaled keyValues: %+v (type: %T)\n", keyValues, keyValues)
 
     for i, keyName := range change.OldKeys.KeyNames {
         if keyName == p.PrimaryKey {
@@ -59,9 +52,6 @@ func (p *DefaultMeilisearchProcessor[T]) extractIDFromChange(change postgres.WAL
             
             idValue := keyValues[i]
             stringID := fmt.Sprintf("%v", idValue)
-            
-            fmt.Printf("Debug: Found primary key '%s' at index %d with value: %v (type: %T)\n", keyName, i, idValue, idValue)
-            fmt.Printf("Debug: Converted to string: '%s'\n", stringID)
             
             return stringID, nil
         }
