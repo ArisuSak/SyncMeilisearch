@@ -10,7 +10,7 @@ import (
 )
 
 type WalProcessor interface {
-	ProcessWalData(data []byte, l *log.Logger) error
+	ProcessWalData(data []byte, pk string, l *log.Logger) error
 }
 
 type DatabaseInitializer interface {

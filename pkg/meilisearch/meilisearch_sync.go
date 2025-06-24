@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"nats-jetstream/pkg/postgres"
 	"net/http"
@@ -34,10 +33,13 @@ func (m *MeiliSearchHandler) ProcessWalData(data []byte, l *log.Logger) error {
 func (m *MeiliSearchHandler) ProcessChange(change postgres.WALChange) error {
 	var endpoint, method string
 	var payload []byte
-	processor := DefaultMeilisearchProcessor[string]{}
+
+	processor := DefaultMeilisearchProcessor[string]{
+		PrimaryKey: m.PK,
+	}
 
 	changeJSON, _ := json.Marshal(change)
-	fmt.Println("something orginal change:", string(changeJSON))
+	fmt.Println("orginal change:", string(changeJSON))
 	switch change.Kind {
 	case "insert", "update":
 		preparePayload, err := processor.preparePayload(change)
@@ -82,17 +84,6 @@ func (m *MeiliSearchHandler) sendHTTPRequest(method, endpoint string, payload []
 		return fmt.Errorf("failed to send HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
-
-		// Read response body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	// Print response status and body
-	log.Printf("Response Status: %s", resp.Status)
-	log.Printf("Response Body: %s", string(respBody))
-	
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("request failed with status %s", resp.Status)
