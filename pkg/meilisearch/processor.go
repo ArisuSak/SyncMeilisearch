@@ -7,10 +7,12 @@ import (
 	"nats-jetstream/pkg/postgres"
 )
 
-type DefaultMeilisearchProcessor[T any] struct{}
+type DefaultMeilisearchProcessor[T any] struct{
+	PrimaryKey string
+}
 
 func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChange) ([]byte, error) {
-	payload := make(map[string]T)
+	payload := make(map[string]interface{})
 
 	var columnValues []interface{}
 	if err := json.Unmarshal(change.ColumnValues, &columnValues); err != nil {
@@ -19,9 +21,7 @@ func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChang
 
 	for i, colName := range change.ColumnNames {
 		if i < len(columnValues) {
-			if value, ok := columnValues[i].(T); ok {
-				payload[colName] = value
-			}
+			payload[colName] = columnValues[i]
 		}
 	}
 
@@ -32,31 +32,42 @@ func (p *DefaultMeilisearchProcessor[T]) preparePayload(change postgres.WALChang
 
 	return jsonPayload, nil
 }
+func (p *DefaultMeilisearchProcessor[T]) extractIDFromChange(change postgres.WALChange) (string, error) {
+    if changeJson, err := json.MarshalIndent(change, "", "  "); err == nil {
+        fmt.Println("extractIDFromChange called with change:", string(changeJson))
+    } else {
+        fmt.Println("Failed to marshal change:", err)
+    }
 
-func (p *DefaultMeilisearchProcessor[T]) extractIDFromChange(change postgres.WALChange) (T, error) {
-	var zeroID T
+    if change.OldKeys == nil {
+        return "", fmt.Errorf("oldkeys field is missing")
+    }
 
-	if change.OldKeys != nil {
-		return zeroID, fmt.Errorf("oldkeys field is missing")
-	}
+    // Since KeyValues is json.RawMessage, unmarshal it properly
+    var keyValues []interface{}
+    if err := json.Unmarshal(change.OldKeys.KeyValues, &keyValues); err != nil {
+        return "", fmt.Errorf("failed to unmarshal key values: %w", err)
+    }
 
-	var keyValues []interface{}
-	if err := json.Unmarshal(change.OldKeys.KeyValues, &keyValues); err != nil {
-		return zeroID, fmt.Errorf("failed to unmarshal key values: %w", err)
-	}
+    fmt.Printf("Debug: Unmarshaled keyValues: %+v (type: %T)\n", keyValues, keyValues)
 
-	for i, keyName := range change.OldKeys.KeyNames {
-		if keyName == "id" && i < len(keyValues) {
-			if i < len(keyValues) {
-				if id, ok := keyValues[i].(T); ok {
-					return id, nil
-				} else {
-					return zeroID, fmt.Errorf("ID is not of expected type")
-				}
-			}
-		}
-	}
-	return zeroID, fmt.Errorf("ID column not found in oldkeys")
+    for i, keyName := range change.OldKeys.KeyNames {
+        if keyName == p.PrimaryKey {
+            if i >= len(keyValues) {
+                return "", fmt.Errorf("primary key index out of range")
+            }
+            
+            idValue := keyValues[i]
+            stringID := fmt.Sprintf("%v", idValue)
+            
+            fmt.Printf("Debug: Found primary key '%s' at index %d with value: %v (type: %T)\n", keyName, i, idValue, idValue)
+            fmt.Printf("Debug: Converted to string: '%s'\n", stringID)
+            
+            return stringID, nil
+        }
+    }
+
+    return "", fmt.Errorf("primary key %q not found in oldkeys", p.PrimaryKey)
 }
 
 func (m *MeiliSearchHandler) fetchDataFromDatabase(db *sql.DB) ([]map[string]interface{}, error) {
