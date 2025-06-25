@@ -99,8 +99,6 @@ func (m *MeiliSearchHandler) InitializeData(l *log.Logger) error {
 		return nil
 	}
 
-	l.Println("Data initialization for Meilisearch is enable")
-
 	return InitializeMeilisearchDataByClient(m.DB, m, m.Client,l, m.Index, m.PK)
 }
 
@@ -112,7 +110,7 @@ func (m *MeiliSearchHandler) CreateWALCallback(l *log.Logger) func([]byte) {
             return 
         }
         
-        l.Printf("Processing WAL data for table: %s", m.TableName)
+        // l.Printf("Processing WAL data for table: %s", m.TableName)
         if err := m.HandleMessage(data, l); err != nil {
             l.Printf("Failed to handle Meilisearch message for table %s: %v", m.TableName, err)
         }

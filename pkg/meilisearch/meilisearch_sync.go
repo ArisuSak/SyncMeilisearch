@@ -44,7 +44,6 @@ func (m *MeiliSearchHandler) ProcessChange(change postgres.WALChange) error {
 	case "insert", "update":
 		preparePayload, err := processor.preparePayload(change)
 
-		fmt.Println("change payload", string(preparePayload))
 		if err != nil {
 			return fmt.Errorf("failed to prepare payload: %w", err)
 		}
