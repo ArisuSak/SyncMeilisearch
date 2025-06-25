@@ -67,7 +67,7 @@ func (m *MeiliSearchHandler) ProcessChange(change postgres.WALChange) error {
 
 func (m *MeiliSearchHandler) sendHTTPRequest(method, endpoint string, payload []byte) error {
 
-	log.Printf("Sending %s request to %s with payload: %s", method, endpoint, string(payload))
+	// log.Printf("Sending %s request to %s with payload: %s", method, endpoint, string(payload))
 
 	req, err := http.NewRequest(method, endpoint, bytes.NewBuffer(payload))
 	if err != nil {
