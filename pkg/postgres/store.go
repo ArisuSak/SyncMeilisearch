@@ -179,7 +179,7 @@ func StartReplicationDatabase(ctx context.Context, js nats.JetStreamContext, jet
 				l.Fatal("ParseXLogData failed", zap.Error(err))
 			}
 
-			l.Println("wal2json data", zap.String("data", string(xld.WALData)))
+			// l.Println("wal2json data", zap.String("data", string(xld.WALData)))
 
 			callback(xld.WALData)
 
